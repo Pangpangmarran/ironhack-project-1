@@ -51,5 +51,7 @@ def hello():
     return resp
 
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=os.getenv('PORT', 80), debug=True, threaded=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
+
+# above is changed to port 5000 to avoid conflict with the default port 80 which require elevated privileges. This is for the local testing of the application. In production, you may want to use a reverse proxy or a different port as needed.
