@@ -1,0 +1,137 @@
+---
+- name: Install Docker and deploy containers
+  hosts: all
+  become: true
+
+  vars:
+    docker_users:
+      - pangpangmarran
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - python3-pip
+        state: present
+
+    - name: Install Docker Python SDK
+      ansible.builtin.pip:
+        name: docker
+        state: present
+        executable: pip3
+
+    - name: Start and enable Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: "{{ item }}"
+        groups: docker
+        append: true
+      loop: "{{ docker_users }}"
+
+- name: Deploy vote and result on frontend
+  hosts: tag_Name_frontend-1,tag_Name_frontend-2
+  become: true
+
+  tasks:
+    - name: Pull vote image
+      community.docker.docker_image:
+        name: pangpangmarran/voting-app:latest
+        source: pull
+
+    - name: Run vote container
+      community.docker.docker_container:
+        name: vote
+        image: pangpangmarran/voting-app:latest
+        ports:
+          - "80:80"
+        env:
+          REDIS_HOST: "{{ hostvars[groups['tag_Name_backend'][0]].private_ip }}"
+          REDIS_PORT: "6379"
+        state: started
+        restart_policy: always
+
+    - name: Pull result image
+      community.docker.docker_image:
+        name: pangpangmarran/result-app:latest
+        source: pull
+
+    - name: Run result container
+      community.docker.docker_container:
+        name: result
+        image: pangpangmarran/result-app:latest
+        ports:
+          - "81:80"
+        env:
+          PG_HOST: "{{ hostvars[groups['tag_Name_backend'][0]].private_ip }}"
+          PG_USER: "postgres"
+          PG_PASSWORD: "postgres"
+          PG_NAME: "postgres"
+          PG_PORT: "5432"
+        state: started
+        restart_policy: always
+
+- name: Deploy backend (redis and worker)
+  hosts: tag_Name_backend
+  become: true
+
+  tasks:
+    - name: Pull redis image
+      community.docker.docker_image:
+        name: redis
+        source: pull
+
+    - name: Run redis container
+      community.docker.docker_container:
+        name: redis
+        image: redis
+        ports:
+          - "6379:6379"
+        state: started
+        restart_policy: always
+
+    - name: Pull worker image
+      community.docker.docker_image:
+        name: pangpangmarran/worker-app:latest
+        source: pull
+
+    - name: Run worker container
+      community.docker.docker_container:
+        name: worker
+        image: pangpangmarran/worker-app:latest
+        env:
+          REDIS_HOST: "localhost"
+          DB_HOST: "localhost"
+          DB_USER: "postgres"
+          DB_PASSWORD: "postgres"
+          DB_NAME: "postgres"
+        state: started
+        restart_policy: always
+
+    - name: Pull postgres image
+      community.docker.docker_image:
+        name: postgres
+        tag: latest
+        source: pull
+
+    - name: Run postgres container
+      community.docker.docker_container:
+        name: postgres
+        image: postgres:latest
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: "postgres"
+          POSTGRES_PASSWORD: "postgres"
+          POSTGRES_DB: "postgres"
+        state: started
+        restart_policy: always
