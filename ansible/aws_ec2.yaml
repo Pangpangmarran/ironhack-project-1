@@ -1,6 +1,12 @@
+---
 plugin: aws_ec2
 regions:
   - eu-central-1
+filters:
+  instance-state-name: running
+  tag:Type: ec2
+hostnames:
+  - public-ip-address
 keyed_groups:
   - prefix: type
   - key: tags.Type
