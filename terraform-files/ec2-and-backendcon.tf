@@ -1,3 +1,7 @@
+variable "project_name" {
+  type    = string
+  default = "annaas-project1"
+}
 variable "availability_zone" {
   type    = string
   default = "eu-central-1a"
@@ -60,4 +64,14 @@ variable "state_lock_table" {
   description = "DynamoDB table used for Terraform state locking"
   type        = string
   default     = "terraform-locks"
+}
+resource "aws_vpc" "main" {
+  cidr_block = var.vpc_cidr
+
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = {
+    Name = "Main VPC"
+  }
 }

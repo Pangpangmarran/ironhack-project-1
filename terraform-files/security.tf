@@ -1,32 +1,25 @@
-variable "admin_cidr" {
-  type        = string
-  description = "Your IP for SSH access"
-  default     = "85.49.195.61/32"
-}
-variable "key_pair_name" {
-  description = "Name of the EC2 Key Pair to use"
-  type        = string
-  default     = "annaas-key"
-}
-# Key pair is added to my AWS and tested
+
+# Frontend security group: web server access and SSH administration
 resource "aws_security_group" "frontend_sg" {
   name        = "frontend-sg"
-  description = "Allow HTTP"
+  description = "Allow HTTP and SSH access for frontend instances"
   vpc_id      = aws_vpc.main.id
 
+  # HTTP ingress: allow public web traffic
   ingress {
     from_port   = 80
-    to_port     = 81
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
 
+  # SSH ingress: allow remote administration
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.admin_cidr]
   }
 
   egress {
@@ -37,10 +30,12 @@ resource "aws_security_group" "frontend_sg" {
   }
 }
 
+# Backend security group: internal database and cache access only
 resource "aws_security_group" "backend_sg" {
   name   = "backend-sg"
   vpc_id = aws_vpc.main.id
 
+  # PostgreSQL ingress allowed only from VPC CIDR
   ingress {
     from_port   = 5432
     to_port     = 5432
@@ -48,6 +43,7 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = [var.vpc_cidr]
   }
 
+  # Redis ingress allowed only from VPC CIDR
   ingress {
     from_port   = 6379
     to_port     = 6379
@@ -55,6 +51,7 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = [var.vpc_cidr]
   }
 
+  # Egress: allow backend instances to make outbound requests
   egress {
     from_port   = 0
     to_port     = 0
@@ -62,6 +59,8 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+# VPC endpoint security group: secure SSM communication
 resource "aws_security_group" "vpc_endpoint_sg" {
   name        = "vpc-endpoint-sg"
   description = "Security group for VPC endpoints (SSM)"
