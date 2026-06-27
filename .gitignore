@@ -1,0 +1,6 @@
+.venv/
+backend-bootstrap/.terraform/
+terraform-files/.terraform/
+./terraform
+LICENSE
+
