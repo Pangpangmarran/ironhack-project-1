@@ -1,0 +1,7 @@
+plugin: aws_ec2
+regions:
+  - eu-central-1
+keyed_groups:
+  - prefix: type
+  - key: tags.Type
+  - key: 'instance_type'
