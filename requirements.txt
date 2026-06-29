@@ -4,6 +4,8 @@ ansible-core==2.21.1
 ansible-lint==26.4.0
 attrs==26.1.0
 black==26.5.1
+boto3==1.43.36
+botocore==1.43.36
 bracex==2.7
 cffi==2.0.0
 click==8.4.2
@@ -11,6 +13,7 @@ cryptography==49.0.0
 distro==1.9.0
 filelock==3.29.4
 Jinja2==3.1.6
+jmespath==1.1.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 MarkupSafe==3.0.3
@@ -19,6 +22,7 @@ packaging==26.2
 pathspec==1.0.4
 platformdirs==4.10.0
 pycparser==3.0
+python-dateutil==2.9.0.post0
 pytokens==0.4.1
 PyYAML==6.0.3
 referencing==0.37.0
@@ -26,7 +30,10 @@ resolvelib==1.2.1
 rpds-py==2026.5.1
 ruamel.yaml==0.19.1
 ruamel.yaml.clib==0.2.15
+s3transfer==0.19.0
+six==1.17.0
 subprocess-tee==0.4.2
 typing_extensions==4.15.0
+urllib3==2.7.0
 wcmatch==10.1
 yamllint==1.38.0

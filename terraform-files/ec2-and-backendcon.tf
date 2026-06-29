@@ -35,23 +35,11 @@ resource "aws_instance" "ec2" {
   instance_type = each.value.instance_type
 
   tags = {
-    Name       = each.value.name  // Sets the "Name" tag key to the associated value
-    Role       = each.key         // Add a "Role" tag that uses the map key, e.g., "frontend", "backend"
+    Name       = each.value.name  
+    Role       = each.key         
   }
 }
 # The above ami is the Ubuntu image from AWS for eu-central-1
-variable "admin_cidr" {
-  type        = string
-  description = "Your IP for SSH access"
-  default     = "85.49.195.61/32"
-}
-variable "key_pair_name" {
-  description = "Name of the EC2 Key Pair to use"
-  type        = string
-  default     = "annaas-key"
-}
-# Key pair is added to my AWS and tested
-
 variable "state_bucket" {
   description = "S3 bucket for Terraform state"
   type        = string
@@ -61,7 +49,7 @@ variable "state_bucket" {
 variable "state_key" {
   description = "S3 key path for Terraform state"
   type        = string
-  default     = "project1/terraform.tfstate"
+  default     = "/home/annaa/devops-controled/week10/ironhack-project-1/backend-bootstrap/terraform.tfstate"
 }
 
 variable "state_region" {

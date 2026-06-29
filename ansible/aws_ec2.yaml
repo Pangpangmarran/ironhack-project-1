@@ -2,11 +2,11 @@
 plugin: amazon.aws.aws_ec2
 regions:
   - eu-central-1
-hostname_variable:
-  - public-ip-address
+hostname_variable: public-dns-name
 filters:
   instance-state-name: running
 keyed_groups:
   - prefix: role
   - key: ec2_tags.Role
   - key: 'instance_type'
+ 
