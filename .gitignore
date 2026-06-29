@@ -1,6 +1,6 @@
-.venv/
+/ansible-env
 backend-bootstrap/.terraform/
+backend-bootstrap/.terraform.lock.hcl
 terraform-files/.terraform/
-./terraform
 LICENSE
-
+/.terraform

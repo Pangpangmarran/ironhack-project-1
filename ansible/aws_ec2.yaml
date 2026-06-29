@@ -1,12 +1,12 @@
 ---
-plugin: aws_ec2
+plugin: amazon.aws.aws_ec2
 regions:
   - eu-central-1
-hostnames:
+hostname_variable:
   - public-ip-address
 filters:
   instance-state-name: running
 keyed_groups:
-  - prefix: type
-  - key: ec2_tags.Type
+  - prefix: role
+  - key: ec2_tags.Role
   - key: 'instance_type'

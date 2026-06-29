@@ -6,10 +6,6 @@ variable "availability_zone" {
   type    = string
   default = "eu-central-1a"
 }
-variable "ami_id" {
-  type    = string
-  default = "ami-036bdae36143a955f"
-}
 variable "ec2_instances" {
   type = map(object({
     name          = string
@@ -19,17 +15,31 @@ variable "ec2_instances" {
     frontend = {
       name          = "annaas-instance-frontend"
       instance_type = "t3.micro"
+      Role          = "Frontend"
     }
     backend = {
       name          = "annaas-instance-backend"
       instance_type = "t3.micro"
+      Role          = "Backend"
     }
     db = {
       name          = "annaas-instance-db"
       instance_type = "t3.micro"
+      Role          = "DB"
     }
   }
 }
+resource "aws_instance" "ec2" {
+  for_each      = var.ec2_instances
+  ami           = "ami-0303e2e4a29f041a3"
+  instance_type = each.value.instance_type
+
+  tags = {
+    Name       = each.value.name  // Sets the "Name" tag key to the associated value
+    Role       = each.key         // Add a "Role" tag that uses the map key, e.g., "frontend", "backend"
+  }
+}
+# The above ami is the Ubuntu image from AWS for eu-central-1
 variable "admin_cidr" {
   type        = string
   description = "Your IP for SSH access"
