@@ -1,3 +1,14 @@
+variable "admin_cidr" {
+  type        = string
+  description = "Your IP for SSH access"
+  default     = "85.49.195.61/32"
+}
+variable "key_pair_name" {
+  description = "Name of the EC2 Key Pair to use"
+  type        = string
+  default     = "annaas-key"
+}
+# Key pair is added to my AWS and tested
 
 # Frontend security group: web server access and SSH administration
 resource "aws_security_group" "frontend_sg" {
