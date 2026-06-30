@@ -33,6 +33,7 @@ resource "aws_instance" "ec2" {
   for_each      = var.ec2_instances
   ami           = "ami-0303e2e4a29f041a3"
   instance_type = each.value.instance_type
+  key_name      = var.key_pair_name
 
   tags = {
     Name       = each.value.name  
