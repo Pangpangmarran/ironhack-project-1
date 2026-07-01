@@ -5,7 +5,7 @@
 
   vars:
     docker_users:
-      - pangpangmarran
+      - ubuntu
 
   tasks:
     - name: Update apt cache
@@ -15,17 +15,38 @@
     - name: Install required packages
       ansible.builtin.apt:
         name:
-          - docker.io
+          - python3
+          - python3-venv
           - python3-pip
+          - docker.io
+          - pip
         state: present
 
-    - name: Install Docker Python SDK
+    - name: Ensure Python is installed
+      ansible.builtin.apt:
+        name: python3
+        state: present
+        update_cache: true
+
+    - name: Create Python virtual environment
+      ansible.builtin.command:
+        cmd: python3 -m venv /home/{{ ansible_user }}/.local/bin/venv
+      args:
+        creates: /home/{{ ansible_user }}/.local/bin/venv
+
+    - name: Install Docker SDK for Python
       ansible.builtin.pip:
         name: docker
+        executable: /home/{{ ansible_user }}/.local/bin/venv/bin/pip
         state: present
-        executable: pip3
 
     - name: Start and enable Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Ensure Docker service is running
       ansible.builtin.service:
         name: docker
         state: started
@@ -39,7 +60,7 @@
       loop: "{{ docker_users }}"
 
 - name: Deploy vote and result on frontend
-  hosts: tag_Name_frontend-1,tag_Name_frontend-2
+  hosts: annaas-instance-frontend
   become: true
 
   tasks:
@@ -55,7 +76,7 @@
         ports:
           - "80:80"
         env:
-          REDIS_HOST: "{{ hostvars[groups['tag_Name_backend'][0]].private_ip }}"
+          REDIS_HOST: "{{ hostvars[groups['backend'][0]].private_ip }}"
           REDIS_PORT: "6379"
         state: started
         restart_policy: always
@@ -72,7 +93,7 @@
         ports:
           - "81:80"
         env:
-          PG_HOST: "{{ hostvars[groups['tag_Name_backend'][0]].private_ip }}"
+          PG_HOST: "{{ hostvars[groups['backend'][0]].private_ip }}"
           PG_USER: "postgres"
           PG_PASSWORD: "postgres"
           PG_NAME: "postgres"
@@ -81,7 +102,7 @@
         restart_policy: always
 
 - name: Deploy backend (redis and worker)
-  hosts: tag_Name_backend
+  hosts: annaas-instance-backend
   become: true
 
   tasks:
@@ -117,6 +138,11 @@
         state: started
         restart_policy: always
 
+- name: Deploy database (postgres)
+  hosts: annaas-instance-db
+  become: true
+
+  tasks:
     - name: Pull postgres image
       community.docker.docker_image:
         name: postgres

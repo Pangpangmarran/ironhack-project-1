@@ -5,7 +5,8 @@ filters:
   instance-state-name: running
   tag:Name: "*annaa*"
 keyed_groups:
-  - prefix: role
-  - key: ec2_tags.Role
-  - key: 'instance_type'
-hostname_variable: public-ip_address
+  - prefix: frontend
+  - prefix: backend
+  - prefix: db
+  - key: ec2_tags.Name
+hostname_variable: tag:Name
