@@ -34,10 +34,9 @@ resource "aws_instance" "ec2" {
   ami           = "ami-0303e2e4a29f041a3"
   instance_type = each.value.instance_type
   key_name      = var.key_pair_name
-
   tags = {
     Name       = each.value.name  
-    Role       = each.key         
+    Role       = each.key
   }
 }
 # The above ami is the Ubuntu image from AWS for eu-central-1
