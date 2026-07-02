@@ -76,7 +76,7 @@
         ports:
           - "80:80"
         env:
-          REDIS_HOST: "{{ hostvars[groups['backend'][0]].private_ip }}"
+          REDIS_HOST: "{{ hostvars[groups['backend'][0]]['ansible_default_ipv4']['address'] }}"
           REDIS_PORT: "6379"
         state: started
         restart_policy: always
@@ -93,7 +93,7 @@
         ports:
           - "81:80"
         env:
-          PG_HOST: "{{ hostvars[groups['backend'][0]].private_ip }}"
+          PG_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
           PG_USER: "postgres"
           PG_PASSWORD: "postgres"
           PG_NAME: "postgres"
@@ -131,7 +131,7 @@
         image: pangpangmarran/worker-app:latest
         env:
           REDIS_HOST: "localhost"
-          DB_HOST: "localhost"
+          DB_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
           DB_USER: "postgres"
           DB_PASSWORD: "postgres"
           DB_NAME: "postgres"
