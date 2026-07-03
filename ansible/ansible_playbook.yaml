@@ -96,7 +96,7 @@
           PG_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
           PG_USER: "postgres"
           PG_PASSWORD: "postgres"
-          PG_NAME: "postgres"
+          PG_NAME: "votes"
           PG_PORT: "5432"
         state: started
         restart_policy: always
@@ -134,7 +134,7 @@
           DB_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
           DB_USER: "postgres"
           DB_PASSWORD: "postgres"
-          DB_NAME: "postgres"
+          DB_NAME: "votes"
         state: started
         restart_policy: always
 
@@ -158,6 +158,6 @@
         env:
           POSTGRES_USER: "postgres"
           POSTGRES_PASSWORD: "postgres"
-          POSTGRES_DB: "postgres"
+          POSTGRES_DB: "votes"
         state: started
         restart_policy: always
