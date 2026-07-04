@@ -15,17 +15,14 @@ variable "ec2_instances" {
     frontend = {
       name          = "annaas-instance-frontend"
       instance_type = "t3.micro"
-      Role          = "Frontend"
     }
     backend = {
       name          = "annaas-instance-backend"
       instance_type = "t3.micro"
-      Role          = "Backend"
     }
     db = {
       name          = "annaas-instance-db"
       instance_type = "t3.micro"
-      Role          = "DB"
     }
   }
 }
@@ -35,9 +32,24 @@ resource "aws_instance" "ec2" {
   instance_type = each.value.instance_type
   key_name      = var.key_pair_name
   # The above ami is the Ubuntu image from AWS for eu-central-1
+  subnet_id = lookup(
+    {
+      frontend = aws_subnet.public_subnet.id
+      backend  = aws_subnet.private_subnet.id
+    },
+    each.key,
+    aws_subnet.private_db_subnet.id
+  )
+
   vpc_security_group_ids = [
-    // Conditional logic to attach the right security group based on the role
-    each.key == "frontend" ? aws_security_group.frontend_sg.id : aws_security_group.backend_sg.id
+    lookup(
+      {
+        frontend = aws_security_group.frontend_sg.id
+        backend  = aws_security_group.backend_sg.id
+      },
+      each.key,
+      aws_security_group.backend_sg.id
+    )
   ]
 
   tags = {

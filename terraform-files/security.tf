@@ -9,7 +9,10 @@ variable "key_pair_name" {
   default     = "annaas-key"
 }
 # Key pair is added to my AWS and tested
-
+variable "vpc_name" {
+  type    = string
+  default = "annaas-VPC"
+}
 # Frontend security group: web server access and SSH administration
 resource "aws_security_group" "frontend_sg" {
   name        = "annaa-frontend-sg"
