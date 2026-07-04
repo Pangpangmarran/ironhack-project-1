@@ -9,6 +9,12 @@ variable "key_pair_name" {
   default     = "annaas-key"
 }
 # Key pair is added to my AWS and tested
+resource "aws_vpc" "main" {
+  cidr_block = var.vpc_cidr
+  tags = {
+    Name = var.vpc_name
+  }
+}
 variable "vpc_name" {
   type    = string
   default = "annaas-VPC"
