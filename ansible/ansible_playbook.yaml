@@ -76,7 +76,7 @@
         ports:
           - "8080:80"
         env:
-          REDIS_HOST: "{{ hostvars[groups['backend'][0]]['ansible_default_ipv4']['address'] }}"
+          REDIS_HOST: "{{ hostvars[groups['backend'][0]]['ansible_host'] }}"
           REDIS_PORT: "6379"
         state: started
         restart_policy: always
@@ -93,7 +93,7 @@
         ports:
           - "8081:80"
         env:
-          PG_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
+          PG_HOST: "{{ hostvars[groups['database'][0]]['ansible_host'] }}"
           PG_USER: "postgres"
           PG_PASSWORD: "postgres"
           PG_NAME: "votes"
