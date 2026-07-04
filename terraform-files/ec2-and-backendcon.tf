@@ -34,8 +34,8 @@ resource "aws_instance" "ec2" {
   # The above ami is the Ubuntu image from AWS for eu-central-1
   subnet_id = lookup(
     {
-      frontend = aws_subnet.public_subnet.id       // Use public subnet for frontend
-      backend  = aws_subnet.private_subnet.id      // Use private subnet for backend
+      frontend = aws_subnet.public_subnet.id,       // Use public subnet for frontend
+      backend  = aws_subnet.private_subnet.id,      // Use private subnet for backend
       db       = aws_subnet.private_db_subnet.id 
     },
     each.key,
@@ -45,8 +45,8 @@ resource "aws_instance" "ec2" {
   vpc_security_group_ids = [
     lookup(
       {
-        frontend = aws_security_group.frontend_sg.id
-        backend  = aws_security_group.backend_sg.id
+        frontend = aws_security_group.frontend_sg.id,
+        backend  = aws_security_group.backend_sg.id,
         db       = aws_security_group.backend_sg.id
       },
       each.key,
