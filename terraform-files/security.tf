@@ -12,7 +12,7 @@ variable "key_pair_name" {
 
 # Frontend security group: web server access and SSH administration
 resource "aws_security_group" "frontend_sg" {
-  name        = "frontend-sg"
+  name        = "annaa-frontend-sg"
   description = "Allow HTTP and SSH access for frontend instances"
   vpc_id      = aws_vpc.main.id
 
@@ -26,6 +26,18 @@ resource "aws_security_group" "frontend_sg" {
 ingress {
     from_port   = 81
     to_port     = 81
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+ingress {
+    from_port   = 8081
+    to_port     = 8081
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -48,7 +60,7 @@ ingress {
 
 # Backend security group: internal database and cache access only
 resource "aws_security_group" "backend_sg" {
-  name   = "backend-sg"
+  name   = "annaa-backend-sg"
   vpc_id = aws_vpc.main.id
 
   # PostgreSQL ingress allowed only from VPC CIDR
@@ -78,7 +90,7 @@ resource "aws_security_group" "backend_sg" {
 
 # VPC endpoint security group: secure SSM communication
 resource "aws_security_group" "vpc_endpoint_sg" {
-  name        = "vpc-endpoint-sg"
+  name        = "annaa-vpc-endpoint-sg"
   description = "Security group for VPC endpoints (SSM)"
   vpc_id      = aws_vpc.main.id
 

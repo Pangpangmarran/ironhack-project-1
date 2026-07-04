@@ -34,12 +34,17 @@ resource "aws_instance" "ec2" {
   ami           = "ami-0303e2e4a29f041a3"
   instance_type = each.value.instance_type
   key_name      = var.key_pair_name
+# The above ami is the Ubuntu image from AWS for eu-central-1
+  vpc_security_group_ids = [
+    // Conditional logic to attach the right security group based on the role
+    each.key == "frontend" ? data.aws_security_group.frontend.id : data.aws_security_group.backend.id
+  ]
+
   tags = {
     Name       = each.value.name  
     Role       = each.key
   }
 }
-# The above ami is the Ubuntu image from AWS for eu-central-1
 variable "state_bucket" {
   description = "S3 bucket for Terraform state"
   type        = string
