@@ -6,7 +6,8 @@
   vars:
     docker_users:
       - ubuntu
-
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_user: ubuntu
   tasks:
     - name: Update apt cache
       ansible.builtin.apt:
