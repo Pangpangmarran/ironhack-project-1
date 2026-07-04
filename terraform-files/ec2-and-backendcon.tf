@@ -34,8 +34,9 @@ resource "aws_instance" "ec2" {
   # The above ami is the Ubuntu image from AWS for eu-central-1
   subnet_id = lookup(
     {
-      frontend = aws_subnet.public_subnet.id
-      backend  = aws_subnet.private_subnet.id
+      frontend = aws_subnet.public_subnet.id       // Use public subnet for frontend
+      backend  = aws_subnet.private_subnet.id      // Use private subnet for backend
+      db       = aws_subnet.private_db_subnet.id 
     },
     each.key,
     aws_subnet.private_db_subnet.id
@@ -46,6 +47,7 @@ resource "aws_instance" "ec2" {
       {
         frontend = aws_security_group.frontend_sg.id
         backend  = aws_security_group.backend_sg.id
+        db       = aws_security_group.backend_sg.id
       },
       each.key,
       aws_security_group.backend_sg.id
@@ -79,14 +81,4 @@ variable "state_lock_table" {
   description = "DynamoDB table used for Terraform state locking"
   type        = string
   default     = "terraform-locks"
-}
-resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
-
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "Main VPC"
-  }
 }
