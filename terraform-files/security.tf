@@ -90,6 +90,12 @@ resource "aws_security_group" "backend_sg" {
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
   }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.admin_cidr]
+  }
 
   # Egress: allow backend instances to make outbound requests
   egress {
