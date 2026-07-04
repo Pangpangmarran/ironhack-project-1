@@ -74,7 +74,7 @@
         name: vote
         image: pangpangmarran/voting-app:latest
         ports:
-          - "80:80"
+          - "8080:80"
         env:
           REDIS_HOST: "{{ hostvars[groups['backend'][0]]['ansible_default_ipv4']['address'] }}"
           REDIS_PORT: "6379"
@@ -91,7 +91,7 @@
         name: result
         image: pangpangmarran/result-app:latest
         ports:
-          - "81:80"
+          - "8081:80"
         env:
           PG_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
           PG_USER: "postgres"
@@ -130,7 +130,7 @@
         name: worker
         image: pangpangmarran/worker-app:latest
         env:
-          REDIS_HOST: "localhost"
+          REDIS_HOST: "redis"
           DB_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
           DB_USER: "postgres"
           DB_PASSWORD: "postgres"
