@@ -1,0 +1,20 @@
+Outputs:
+
+instance_information = {
+  "backend" = {
+    "Role" = "backend"
+    "name" = "annaas-instance-backend"
+    "private_ip" = "172.31.44.154"
+  }
+  "db" = {
+    "Role" = "db"
+    "name" = "annaas-instance-db"
+    "private_ip" = "172.31.47.159"
+  }
+  "frontend" = {
+    "Role" = "frontend"
+    "name" = "annaas-instance-frontend"
+    "private_ip" = "172.31.37.153"
+  }
+}
+vpc_name = "annaas-VPC"

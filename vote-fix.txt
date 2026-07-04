@@ -1,0 +1,77 @@
+What happened:
+
+The error: operator does not exist: integer = text at line 162 of the worker's UpdateVote function
+Root cause: The database table had the wrong schema
+Expected: id VARCHAR(255) (text), vote VARCHAR(255) (text)
+Actual: id INTEGER (number), vote VARCHAR(255) (text)
+Why it occurred: The table was created by previous initialization with the wrong schema (probably from your original compose file)
+Where it is: In the PostgreSQL database in the votes table
+How to correct it: Drop the old table and recreate with the correct column types matching what the worker code expects
+The worker code (line 129-133 in Program.cs) creates the table:
+
+command.CommandText = @"CREATE TABLE IF NOT EXISTS votes (
+                            id VARCHAR(255) NOT NULL,
+                            vote VARCHAR(255) NOT NULL
+                        )";
+But this only runs on first startup. Since the table already existed with the wrong schema, it never recreated it.
+
+Your images are unchanged. We only fixed the database data inside the container. When you restart everything, if you don't delete the volume, the old schema persists. That's why we had to manually drop and recreate the table.
+
+Now test the full flow. Open http://localhost:8080, vote, then check http://localhost:8081 for results.
+--------------------------------------------
+That's the issue! The votes are in the votes database, but the result-app is querying the postgres database (empty).
+
+The result-app code is hardcoded to use the postgres database. We need to copy the votes table to the postgres database OR change the result-app to query the votes database.
+
+Easiest fix — copy the votes from votes database to postgres database:
+
+docker exec default-db-1 psql -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS votes (id VARCHAR(255) NOT NULL, vote VARCHAR(255) NOT NULL); INSERT INTO votes SELECT * FROM votes WHERE false;"
+Actually simpler — just copy all votes:
+
+docker exec default-db-1 psql -U postgres << 'SQL'
+CREATE TABLE IF NOT EXISTS votes (id VARCHAR(255) NOT NULL, vote VARCHAR(255) NOT NULL);
+INSERT INTO votes (id, vote) SELECT id, vote FROM votes.public.votes;
+SQL
+Wait, that won't work with cross-database queries in PostgreSQL. Let me use a backup/restore approach:
+
+docker exec default-db-1 pg_dump -U postgres -d votes -t votes --no-privileges --no-owner | docker exec -i default-db-1 psql -U postgres -d postgres
+Then verify:
+
+docker exec default-db-1 psql -U postgres -d postgres -c "SELECT * FROM votes;"
+If that's too complex, refresh the page at http://localhost:8081 and let me know if results appear now.
+-------------------------------------------------
+Yes, your Ansible playbook has the same issue. Look at these lines:
+
+Result app environment variables:
+
+PG_NAME: "postgres"
+Worker app environment variables:
+
+DB_NAME: "postgres"
+Both are hardcoded to use the postgres database. But the worker creates the votes table when it first runs. So:
+
+Worker connects to postgres database and creates the votes table there
+Worker inserts votes into postgres.public.votes ✓
+Result-app queries postgres.public.votes ✓
+This should work correctly — both apps use the same postgres database.
+
+The issue in your local docker-compose setup is that the result-app was connecting to postgres database but the votes table was created in the votes database (a different database).
+
+For your Ansible playbook to work correctly:
+
+Make sure both apps use the same database name. Currently they do (postgres), so it should be fine. But to be explicit, change:
+
+PG_NAME: "postgres"
+to:
+
+PG_NAME: "votes"
+And make sure the worker also uses:
+
+DB_NAME: "votes"
+Then both will use the same votes database consistently.
+
+Actually, looking closer — your Ansible playbook looks correct as-is. Both use postgres database. The local issue we had was because the compose file created the votes database but apps were configured differently.
+
+For your local testing, let me fix it by copying votes to the postgres database where result-app is looking:
+
+docker exec default-db-1 bash -c "psql -U postgres -d votes -c 'COPY votes TO STDOUT' | psql -U postgres -d postgres -c 'CREATE TABLE IF NOT EXISTS votes (id VARCHAR(255), vote VARCHAR(255)); COPY votes FROM STDIN'"

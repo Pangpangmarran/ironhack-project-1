@@ -37,7 +37,7 @@ resource "aws_instance" "ec2" {
 # The above ami is the Ubuntu image from AWS for eu-central-1
   vpc_security_group_ids = [
     // Conditional logic to attach the right security group based on the role
-    each.key == "frontend" ? data.aws_security_group.frontend.id : data.aws_security_group.backend.id
+    each.key == "frontend" ? aws_security_group.frontend_sg.id : aws_security_group.backend_sg.id
   ]
 
   tags = {
