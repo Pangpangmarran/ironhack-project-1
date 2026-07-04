@@ -1,7 +1,7 @@
 variable "admin_cidr" {
   type        = string
   description = "Your IP for SSH access"
-  default     = "85.49.195.61/32"
+  default     = "0.0.0.0/0"
 }
 variable "key_pair_name" {
   description = "Name of the EC2 Key Pair to use"
