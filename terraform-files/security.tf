@@ -9,19 +9,7 @@ variable "key_pair_name" {
   default     = "annaas-key"
 }
 # Key pair is added to my AWS and tested
-resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
 
-    enable_dns_support   = true
-    enable_dns_hostnames = true
-  tags = {
-    Name = var.vpc_name
-  }
-}
-variable "vpc_name" {
-  type    = string
-  default = "annaas-VPC"
-}
 # Frontend security group: web server access and SSH administration
 resource "aws_security_group" "frontend_sg" {
   name        = "annaa-frontend-sg"
@@ -120,6 +108,13 @@ resource "aws_security_group" "vpc_endpoint_sg" {
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
   }
+  ingress {
+    description = "HTTPS from VPC"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
 
   egress {
     description = "Allow all outbound"
@@ -130,14 +125,14 @@ resource "aws_security_group" "vpc_endpoint_sg" {
   }
 
   tags = {
-    Name = "vpc-endpoint-sg"
+    Name = "annaas-vpc-endpoint-sg"
   }
 }
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "MyInternetGateway"
+    Name = "annaas-InternetGateway"
   }
 }
 resource "aws_route_table" "public_route_table" {
@@ -149,11 +144,11 @@ resource "aws_route_table" "public_route_table" {
   }
 
   tags = {
-    Name = "PublicRouteTable"
+    Name = "annaas-PublicRouteTable"
   }
 }
 
-// Associate the route table with the public subnet
+# Associate the route table with the public subnet
 resource "aws_route_table_association" "public_subnet_association" {
   subnet_id      = aws_subnet.public_subnet.id
   route_table_id = aws_route_table.public_route_table.id
