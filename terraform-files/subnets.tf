@@ -26,7 +26,7 @@ variable "private_subnet_cidr" {
 variable "private_db_subnet_cidr" {
   type    = string
   default = "10.0.4.0/24"
-} 
+}
 
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main.id
