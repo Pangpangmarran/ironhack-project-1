@@ -14,7 +14,7 @@ output "instance_information" {
   }
 }
 output "security_groups_ids" {
-  description = "The IDs for the sg"
+  description = "The IDs for the sgs"
   value = [
     aws_security_group.backend_sg.id,
     aws_security_group.frontend_sg.id

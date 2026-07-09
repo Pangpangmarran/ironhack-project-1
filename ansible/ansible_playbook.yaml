@@ -8,11 +8,11 @@
       - ubuntu
     ansible_python_interpreter: /usr/bin/python3
     ansible_user: ubuntu
+
   tasks:
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: true
-        cache_valid_time: 3600
 
     - name: Install required packages
       ansible.builtin.apt:
@@ -62,7 +62,7 @@
       loop: "{{ docker_users }}"
 
 - name: Deploy vote and result on frontend
-  hosts: annaas-instance-frontend
+  hosts: bastion
   become: true
 
   tasks:
@@ -78,7 +78,7 @@
         ports:
           - "8080:80"
         env:
-          REDIS_HOST: "{{ hostvars[groups['backend'][0]]['ansible_host'] }}"
+          REDIS_HOST: "{{ hostvars[groups['backendGroup'][0]].ansible_facts['default_ipv4']['address'] }}"
           REDIS_PORT: "6379"
         state: started
         restart_policy: always
@@ -95,7 +95,7 @@
         ports:
           - "8081:80"
         env:
-          PG_HOST: "{{ hostvars[groups['database'][0]]['ansible_host'] }}"
+          PG_HOST: "{{ hostvars[groups['database'][0]].ansible_facts['default_ipv4']['address'] }}"
           PG_USER: "postgres"
           PG_PASSWORD: "postgres"
           PG_NAME: "votes"
@@ -104,7 +104,7 @@
         restart_policy: always
 
 - name: Deploy backend (redis and worker)
-  hosts: annaas-instance-backend
+  hosts: backend
   become: true
 
   tasks:
@@ -133,7 +133,7 @@
         image: pangpangmarran/worker-app:latest
         env:
           REDIS_HOST: "redis"
-          DB_HOST: "{{ hostvars[groups['database'][0]]['ansible_default_ipv4']['address'] }}"
+          DB_HOST: "{{ hostvars[groups['database'][0]].ansible_facts['default_ipv4']['address'] }}"
           DB_USER: "postgres"
           DB_PASSWORD: "postgres"
           DB_NAME: "votes"
@@ -141,7 +141,7 @@
         restart_policy: always
 
 - name: Deploy database (postgres)
-  hosts: annaas-instance-db
+  hosts: db
   become: true
 
   tasks:
