@@ -1,0 +1,102 @@
+
+Below is the snippet to install squid, a middle man and "help" as to not rely on SSH as this is more reliable. 
+This time it was done manually and the config file edited to work properly (/etc/squid/squid.conf). 
+Adding [acl vpc_private src 10.0.0.0/8] and [http_access allow vpc_private] to the config file.
+This needs to be prior to the line: [http_access deny all] in the config file.
+
+Below should do it for you, but if not the above configuration needs to be done manually.
+# In your FIRST play (e.g., the Bastion setup play)
+
+
+---
+- name: Set Global Proxy Variables
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Define Proxy Fact
+      ansible.builtin.set_fact:
+        bastion_private_ip: "10.0.1.88"
+        proxy_port: "3128"
+      run_once: true # Ensures it runs only once
+
+- name: Configure Squid for VPC Access
+  hosts: bastion
+  become: true
+  tasks:
+    - name: Define ACL for Private VPC CIDR
+      ansible.builtin.lineinfile:
+        path: /etc/squid/squid.conf
+        line: 'acl vpc_private src 10.0.0.0/8'
+        insertafter: '^acl localhost' # Inserts after the localhost ACL definition
+        state: present
+
+    - name: Allow VPC Private CIDR in HTTP Access
+      ansible.builtin.lineinfile:
+        path: /etc/squid/squid.conf
+        line: 'http_access allow vpc_private'
+        insertbefore: 'http_access deny all'
+        state: present
+
+    - name: Initialize Squid Swap (if not done)
+      ansible.builtin.command: squid -z
+      args:
+        creates: /var/spool/squid/swap.state
+      ignore_errors: yes
+
+    - name: Restart Squid
+      ansible.builtin.systemd:
+        name: squid
+        state: restarted   
+        
+    - name: Wait for Squid to be ready
+      ansible.builtin.wait_for:
+        port: 3128
+        delay: 5
+        timeout: 30
+
+- name: Configure Docker Daemon to use Squid Proxy
+  hosts: backend:db
+  become: true
+  vars:
+    bastion_private_ip: "10.0.1.88"
+    proxy_port: "3128"
+
+  tasks:
+    # 1. Create the systemd drop-in directory
+    - name: Create Docker systemd override directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+        mode: '0755'
+
+    # 2. Create the proxy configuration file
+    - name: Create Docker proxy override file
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+        mode: '0644'
+        content: |
+          [Service]
+          Environment="HTTP_PROXY=http://{{ bastion_private_ip }}:{{ proxy_port }}"
+          Environment="HTTPS_PROXY=http://{{ bastion_private_ip }}:{{ proxy_port }}"
+          Environment="NO_PROXY=localhost,127.0.0.1,10.0.0.0/8"
+
+    # 3. Reload systemd and restart Docker to apply changes
+    - name: Reload systemd and restart Docker
+      ansible.builtin.systemd:
+        daemon_reload: yes
+        name: docker
+        state: restarted
+        enabled: yes
+
+    # 4. Now pull the image (this will now work)
+    - name: Pull redis image
+      community.docker.docker_image:
+        name: redis
+        tag: latest
+        source: pull   
+
+Why This Is Necessary:
+Daemon vs. Client: When you run docker pull, the CLI sends a request to the Docker Daemon (dockerd). The Daemon then performs the actual download.
+Isolation: The Daemon runs as a root system service (systemd). It does not see the HTTP_PROXY variables you set in /etc/environment or for the pip task. 
+Systemd Override: The http-proxy.conf file explicitly tells systemd to inject these proxy variables when starting the Docker service. 
+Once these tasks run successfully, the Pull redis image task will route through your Bastion's Squid proxy and complete without timing out.

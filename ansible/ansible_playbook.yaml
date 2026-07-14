@@ -1,4 +1,44 @@
 ---
+# In your FIRST play (e.g., the Bastion setup play)
+- name: Set Global Proxy Variables
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Define Proxy Fact
+      ansible.builtin.set_fact:
+        bastion_private_ip: "10.0.1.88"
+        proxy_port: "3128"
+      run_once: true # Ensures it runs only once
+
+- name: Configure APT Proxy and Update
+  hosts: backend, db
+  become: true
+  vars:
+    bastion_private_ip: "10.0.1.88" 
+    proxy_port: "3128"
+
+  tasks:
+    # 1. Configure APT to use the Squid Proxy on the Bastion
+    - name: Set APT HTTP/HTTPS Proxy
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/99proxy
+        mode: '0644'
+        owner: root
+        group: root
+        content: |
+          Acquire::http::Proxy "http://{{ bastion_private_ip }}:{{ proxy_port }}";
+          Acquire::https::Proxy "http://{{ bastion_private_ip }}:{{ proxy_port }}";
+
+    # 2. Force IPv4 (Optional but recommended based on previous error)
+    - name: Force APT to use IPv4
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/99force-ipv4
+        mode: '0644'
+        owner: root
+        group: root
+        content: |
+          Acquire::ForceIPv4 "true";
+
 - name: Install Docker and deploy containers
   hosts: all
   become: true
@@ -8,6 +48,8 @@
       - ubuntu
     ansible_python_interpreter: /usr/bin/python3
     ansible_user: ubuntu
+    bastion_private_ip: "10.0.1.88" 
+    proxy_port: "3128"
 
   tasks:
     - name: Update apt cache
@@ -36,11 +78,14 @@
       args:
         creates: /home/{{ ansible_user }}/.local/bin/venv
 
-    - name: Install Docker SDK for Python
+    - name: Install Docker SDK for Python via Proxy
       ansible.builtin.pip:
         name: docker
         executable: /home/{{ ansible_user }}/.local/bin/venv/bin/pip
         state: present
+      environment:
+        HTTP_PROXY: "http://{{ bastion_private_ip }}:3128"
+        HTTPS_PROXY: "http://{{ bastion_private_ip }}:3128"
 
     - name: Start and enable Docker
       ansible.builtin.service:
@@ -103,6 +148,40 @@
         state: started
         restart_policy: always
 
+- name: Configure Docker Daemon to use Squid Proxy
+  hosts: backend:db
+  become: true
+  vars:
+    bastion_private_ip: "10.0.1.88"
+    proxy_port: "3128"
+
+  tasks:
+    # 1. Create the systemd drop-in directory
+    - name: Create Docker systemd override directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+        mode: '0755'
+
+    # 2. Create the proxy configuration file
+    - name: Create Docker proxy override file
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+        mode: '0644'
+        content: |
+          [Service]
+          Environment="HTTP_PROXY=http://{{ bastion_private_ip }}:{{ proxy_port }}"
+          Environment="HTTPS_PROXY=http://{{ bastion_private_ip }}:{{ proxy_port }}"
+          Environment="NO_PROXY=localhost,127.0.0.1,10.0.0.0/8"
+
+    # 3. Reload systemd and restart Docker to apply changes
+    - name: Reload systemd and restart Docker
+      ansible.builtin.systemd:
+        daemon_reload: yes
+        name: docker
+        state: restarted
+        enabled: yes
+        
 - name: Deploy backend (redis and worker)
   hosts: backend
   become: true
