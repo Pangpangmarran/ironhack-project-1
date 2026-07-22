@@ -1,0 +1,214 @@
+Why One File vs Multiple Files?
+
+Single File (voting-app-k8s.yaml):
+
+Everything in one place: Namespace, ConfigMap, Secret, Deployments, Services, PVC
+Easy to deploy: kubectl apply -f voting-app-k8s.yaml
+Good for: Learning, small projects, simple demos
+
+My Design Choices Explained:
+
+1. ConfigMap in the manifest (vs separate file)
+
+✓ I included it because:
+
+All configuration is in one place
+Easy to see what environment variables each service needs
+Good for learning
+✗ I could have separated it because:
+
+Easier to update config without touching deployments
+Better for large projects with many configs
+2. Secret in the manifest (vs external secret manager)
+
+✓ I included it because:
+
+Simple demonstration
+Shows the concept
+✗ In production, you'd use:
+
+AWS Secrets Manager
+HashiCorp Vault
+Kubernetes External Secrets Operator
+Never commit secrets to Git!
+3. One namespace (voting-app)
+
+✓ I used one because:
+
+Groups all resources together
+Easy to delete everything: kubectl delete namespace voting-app
+Prevents accidental mixing with other apps
+4. PersistentVolumeClaim (PVC) for PostgreSQL
+
+✓ I included it because:
+
+Data persists across pod restarts
+Database doesn't lose data if pod crashes
+✗ For cloud (AWS/GCP/Azure), you'd use managed databases
+------------------------------------------------------------------------------------------
+
+What is a Config File? (Different from ConfigMap)
+
+There are two types of "config":
+
+#ConfigMap (Kubernetes resource) — What I used in the manifest
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: voting-config
+  namespace: voting-app
+data:
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  DB_HOST: "db"
+
+Purpose: Store non-sensitive configuration data (env vars, connection strings, settings) Why separate? Can be updated without rebuilding Docker images
+
+#When to Use Separate Config Files?
+
+#Use Separate Files When:
+Multiple Environments (dev, staging, prod)
+voting-app-dev.yaml → Redis in-memory, small DB voting-app-staging.yaml → Replicas: 2, medium storage voting-app-prod.yaml → Replicas: 5, large storage, HA
+
+#Config Changes Frequently
+configmap.yaml (separate) → Update without touching deployments deployment.yaml → Stays stable
+
+#Different Teams
+Database team owns db-deployment.yaml
+App team owns vote-deployment.yaml
+Each can be updated independently
+
+#Large Projects (20+ resources)
+Hard to find things in one giant file
+Organize by service/component
+
+#Using Kustomize or Helm
+Kustomize: Combine base + overlays for different envs
+Helm: Template-based, package management
+
+-----------------------------------------------------------------------------------
+My Manifest Design: Why It's Organized This Way
+
+# 1. Namespace first
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voting-app
+
+# 2. Configuration layer (non-sensitive)
+---
+apiVersion: v1
+kind: ConfigMap
+...
+
+# 3. Secrets layer (sensitive)
+---
+apiVersion: v1
+kind: Secret
+...
+
+# 4. Storage layer (PVC)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+...
+
+# 5. Stateful services (Database)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+...
+
+# 6. Cache layer (Redis)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+...
+
+# 7. Frontend services (Vote, Result)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+...
+
+# 8. Background worker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+...
+Order matters:
+
+Namespace first (so resources can reference it)
+ConfigMap/Secret (dependency for deployments)
+PVC (dependency for stateful services)
+Database (needs to exist before other services connect)
+Cache (needed by vote and worker)
+Applications (vote, result, worker depend on db/redis)
+----------------------------------------------------------------------------------
+
+What is CI/CD?
+
+CI (Continuous Integration):
+
+Every time you push code to Git, automated tests run
+Build Docker images from your code
+Run security scans
+If all pass → code is "integrated" and ready
+CD (Continuous Deployment):
+
+After CI passes, automatically deploy to production
+Update Kubernetes with new images
+Roll out changes gradually (no downtime)
+
+What triggers the pipeline?
+
+Push to main branch → Full CI/CD pipeline runs
+Pull Request → CI only (tests, build, security checks)
+Manual trigger → Deploy on-demand
+For your voting app, you have 3 services:
+
+Vote (Python Flask):
+
+Tests: pytest or unittest
+Build: Multi-stage Docker build
+Push: pangpangmarran/voting-app:main-abc1234 (tag with commit hash)
+Result (Node.js):
+
+Tests: npm test or mocha
+Build: Multi-stage Docker build
+Push: pangpangmarran/result-app:main-abc1234
+Worker (.NET):
+
+Build: dotnet build
+Push: pangpangmarran/worker-app:main-abc1234
+Key Components:
+
+1. GitHub Actions Workflow File (.github/workflows/ci-cd.yml)
+Defines all steps
+Runs on push/PR
+Has secrets (Docker Hub credentials, K8s API token)
+
+2. Triggers
+push: [main] → Deploy to production
+pull_request: [main] → Test only
+workflow_dispatch → Manual trigger
+
+3. Jobs
+Build Job: Compile, test, build Docker images
+Push Job: Push images to Docker Hub
+Deploy Job: Update Kubernetes manifests and apply
+
+4. Secrets
+DOCKER_USERNAME → for pushing to Docker Hub
+DOCKER_PASSWORD → Docker Hub token
+KUBECONFIG → Kubernetes cluster credentials

@@ -1,0 +1,281 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voting-app
+
+---
+# ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: voting-config
+  namespace: voting-app
+data:
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  DB_HOST: "db-service"
+  DB_PORT: "5432"
+  DB_USER: "postgres"
+  DB_NAME: "votes"
+
+---
+# Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: voting-secret
+  namespace: voting-app
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "postgres"
+  DB_PASSWORD: "postgres"
+
+---
+# PersistentVolumeClaim for PostgreSQL
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-pvc
+  namespace: voting-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Frontend Pod (vote + result)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend
+  namespace: voting-app
+spec:
+  containers:
+  # Vote container
+  - name: vote
+    image: pangpangmarran/voting-app:latest
+    ports:
+    - containerPort: 80
+    env:
+    - name: REDIS_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: REDIS_HOST
+    - name: REDIS_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: REDIS_PORT
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  # Result container
+  - name: result
+    image: pangpangmarran/result-app:latest
+    ports:
+    - containerPort: 80
+    env:
+    - name: PG_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_HOST
+    - name: PG_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_PORT
+    - name: PG_USER
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_USER
+    - name: PG_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: voting-secret
+          key: DB_PASSWORD
+    - name: PG_DATABASE
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_NAME
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+---
+# Backend Pod (redis + worker)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backend
+  namespace: voting-app
+spec:
+  containers:
+  # Redis container
+  - name: redis
+    image: redis:alpine
+    ports:
+    - containerPort: 6379
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  # Worker container
+  - name: worker
+    image: pangpangmarran/worker-app:latest
+    env:
+    - name: REDIS_HOST
+      value: "localhost"  # Same pod as redis
+    - name: REDIS_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: REDIS_PORT
+    - name: DB_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_HOST
+    - name: DB_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_PORT
+    - name: DB_USER
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_USER
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: voting-secret
+          key: DB_PASSWORD
+    - name: DB_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_NAME
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+---
+# Database Pod (postgres)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: database
+  namespace: voting-app
+spec:
+  containers:
+  - name: postgres
+    image: postgres:15-alpine
+    ports:
+    - containerPort: 5432
+    env:
+    - name: POSTGRES_USER
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_USER
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: voting-secret
+          key: POSTGRES_PASSWORD
+    - name: POSTGRES_DB
+      valueFrom:
+        configMapKeyRef:
+          name: voting-config
+          key: DB_NAME
+    volumeMounts:
+    - name: db-storage
+      mountPath: /var/lib/postgresql/data
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  volumes:
+  - name: db-storage
+    persistentVolumeClaim:
+      claimName: db-pvc
+
+---
+# Service for frontend (vote + result)
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: voting-app
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+  - name: vote
+    port: 8080
+    targetPort: 80
+    protocol: TCP
+  - name: result
+    port: 8081
+    targetPort: 80
+    protocol: TCP
+
+---
+# Service for backend (redis + worker)
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: voting-app
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+
+---
+# Service for database
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+  namespace: voting-app
+spec:
+  type: ClusterIP
+  selector:
+    app: database
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
