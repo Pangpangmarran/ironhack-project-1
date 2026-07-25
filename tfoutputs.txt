@@ -1,0 +1,16 @@
+{
+    "logGroups": [
+        {
+            "logGroupName": "/aws/eks/eks-annaa/cluster",
+            "creationTime": 1784980562926,
+            "retentionInDays": 90,
+            "metricFilterCount": 0,
+            "arn": "arn:aws:logs:eu-central-1:686699774218:log-group:/aws/eks/eks-annaa/cluster:*",
+            "storedBytes": 0,
+            "logGroupClass": "STANDARD",
+            "logGroupArn": "arn:aws:logs:eu-central-1:686699774218:log-group:/aws/eks/eks-annaa/cluster",
+            "deletionProtectionEnabled": false,
+            "bearerTokenAuthenticationEnabled": false
+        }
+    ]
+}

@@ -1,6 +1,7 @@
+----------------------------------------------------------------------
 Why One File vs Multiple Files?
-
-Single File (voting-app-k8s.yaml):
+------------------------------------------------------------------------
+Single File:
 
 Everything in one place: Namespace, ConfigMap, Secret, Deployments, Services, PVC
 Easy to deploy: kubectl apply -f voting-app-k8s.yaml
@@ -15,22 +16,26 @@ My Design Choices Explained:
 All configuration is in one place
 Easy to see what environment variables each service needs
 Good for learning
+
 ✗ I could have separated it because:
 
 Easier to update config without touching deployments
 Better for large projects with many configs
+
 2. Secret in the manifest (vs external secret manager)
 
 ✓ I included it because:
 
 Simple demonstration
 Shows the concept
+
 ✗ In production, you'd use:
 
 AWS Secrets Manager
 HashiCorp Vault
 Kubernetes External Secrets Operator
 Never commit secrets to Git!
+
 3. One namespace (voting-app)
 
 ✓ I used one because:
@@ -155,9 +160,22 @@ Database (needs to exist before other services connect)
 Cache (needed by vote and worker)
 Applications (vote, result, worker depend on db/redis)
 ----------------------------------------------------------------------------------
+For GitHub Actions to work:
+-----------------------------------------------------------------------------------
+You need the EKS kubeconfig (not Minikube), because:
 
+GitHub Actions runs in the cloud
+It needs to reach your EKS cluster in AWS
+The EKS kubeconfig has the credentials
+Check which kubeconfig you're using:
+
+kubectl cluster-info
+Does it show:
+
+Kubernetes master is running at https://...eks... → EKS ✓
+-----------------------------------------------------------------------------------------
 What is CI/CD?
-
+------------------------------------------------------------------------------------------
 CI (Continuous Integration):
 
 Every time you push code to Git, automated tests run
@@ -211,4 +229,45 @@ Deploy Job: Update Kubernetes manifests and apply
 4. Secrets
 DOCKER_USERNAME → for pushing to Docker Hub
 DOCKER_PASSWORD → Docker Hub token
-KUBECONFIG → Kubernetes cluster credentials
+KUBE_CONFIG → Kubernetes cluster credentials
+
+GitHub Secrets Location (One place for all):
+
+GitHub repo → Settings → Secrets and variables → Actions
+
+Add all three secrets there:
+
+DOCKER_USERNAME: my username pangpangmarran
+
+DOCKER_PASSWORD: Create a personal access token in Docker Hub and use it here
+
+1. Go to Docker Hub:https://hub.docker.com/settings/security
+2. Click "New Access Token"
+3. Give it a name (e.g., "GitHub Actions")
+4. Select permissions:
+Check "Read, Write, Delete"
+5. Click "Generate"
+6. Copy the token (it only shows once!)
+7. Add it to GitHub Secrets:
+
+  Go to your GitHub repo → Settings → Secrets and variables → Actions
+    Click "New repository secret"
+    Name: DOCKER_PASSWORD
+    Value: Paste the token you just copied
+
+KUBE_CONFIG: Encode your Kubernetes config file as base64 and paste it here
+Step by step:
+
+cat ~/.kube/config
+Copy everything it outputs (the entire YAML content).
+
+Then encode it:
+
+cat ~/.kube/config | base64 -w 0
+Copy the entire base64 string (it will be very long, multiple lines).
+
+Add to GitHub:
+
+Name: KUBE_CONFIG
+Value: Paste the entire base64 string
+GitHub Actions will decode it and use the full config to connect to your cluster.

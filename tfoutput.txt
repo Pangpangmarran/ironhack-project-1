@@ -1,0 +1,2 @@
+cluster_name = "eks-annaa"
+connect_command = "aws eks update-kubeconfig --name eks-annaa --region eu-central-1"
