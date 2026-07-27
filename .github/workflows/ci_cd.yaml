@@ -3,10 +3,10 @@ name: CI/CD - Build, Test & Deploy to Kubernetes
 on:
   push:
     branches:
-      - main
+      - project2
   pull_request:
     branches:
-      - main
+      - project2
 
 env:
   REGISTRY: docker.io
@@ -199,8 +199,8 @@ jobs:
     steps:
       - name: Deployment Success
         if: success()
-        run: echo "✅ Deployment to Kubernetes successful! Vote app and Result app are live."
+        run: echo "Deployment to Kubernetes successful! Vote app and Result app are live."
 
       - name: Deployment Failed
         if: failure()
-        run: echo "❌ Deployment failed. Check logs above for details."
+        run: echo "Deployment failed. Check logs above for details."

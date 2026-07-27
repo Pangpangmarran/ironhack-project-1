@@ -4,7 +4,7 @@ Why One File vs Multiple Files?
 Single File:
 
 Everything in one place: Namespace, ConfigMap, Secret, Deployments, Services, PVC
-Easy to deploy: kubectl apply -f voting-app-k8s.yaml
+Easy to deploy: kubectl apply -f microservicesVoting.yaml
 Good for: Learning, small projects, simple demos
 
 My Design Choices Explained:
