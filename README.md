@@ -1,13 +1,19 @@
 This is project 2 for the IronHack DevOps course where we are hosting a Voting app in an Kubernetes cluster. 
 The actual app is the same as in project 1, the user experience should be the same. 
-What's new is the backend hosting and CI/CD pipeline. 
+What's new is the backend hosting and CI/CD pipeline.
+The cluster used is in another directory in wsl2 with path: 
+"~\devops-controled\week13\EKS-first-cluster"
 
 Lessons and reminders:
-#1. wsl and wsl2 will create SSH issues as the IP from the wsl Linux will change when re-starting.
+#1. wsl2 will create SSH issues as the IP from the wsl Linux will change when re-starting or re-booting and they have two distinct Network layers that get into "fights".
+
 #2. There is some latency when putting it all up in the cloud, have patience.
-#3. Some AWS features are automaticly added when creating the resources, these can hide away when tearing down the hosting and prevent teardown action, leaving compete or part of resources that will cost you money.
---------------------------------------------------------------------------
+
+#3. Some AWS features are automaticly added when creating the resources, these can hide away when tearing down the hosting and prevent teardown action, leaving compete or part of resources that will cost you money (CloudWatch).
+
+----------------------------------------------------------------
 Plan to convert Project 1 to Project 2:
+----------------------------------------------------------------
 
 Architecture changes:
 
@@ -19,17 +25,21 @@ Redis
 PostgreSQL
 
 Create Services for networking:
+
 Vote Service (LoadBalancer or NodePort on 8080)
 Result Service (LoadBalancer or NodePort on 8081)
 Redis Service (ClusterIP, internal only)
 PostgreSQL Service (ClusterIP, internal only)
 
 Use ConfigMaps/Secrets for config:
+
 Database credentials → Secrets
 Environment variables → ConfigMaps
 Connection strings with service names (e.g., redis:6379, db:5432)
+# details on this will be in projectparts.txt where the design choices will be as well as some instructions.
 
-Persistent storage:
+Persistent storage: 
+
 PostgreSQL needs PersistentVolume for data
 Redis can use ephemeral storage (or PV if you want persistence)
 
@@ -39,10 +49,13 @@ Service discovery by DNS name (built-in)
 Horizontal scaling (replicas)
 Health checks → livenessProbe/readinessProbe
 Resource limits (CPU/memory requests)
+
 --------------------------------------------------------------------------
+
 To deploy this to your Kubernetes cluster:
 
-kubectl apply -f voting-app-k8s.yaml
+kubectl apply -f microservicesVoting.yaml
+
 Check deployment status:
 
 kubectl get all -n voting-app
@@ -50,10 +63,12 @@ kubectl get svc -n voting-app
 Get the external IPs for voting and results:
 
 kubectl get svc vote result -n voting-app
-Access at the LoadBalancer external IPs shown.
-------------------------------------------------------------------------------
-What is CI/CD?
 
+Access at the LoadBalancer external IPs shown.
+
+------------------------------------------------------------------
+What is CI/CD?
+-----------------------------------------------------------------------
 CI (Continuous Integration):
 
 Every time you push code to Git, automated tests run
@@ -87,6 +102,7 @@ Worker (.NET):
 
 Build: dotnet build
 Push: pangpangmarran/worker-app:main-abc1234
+
 Key Components:
 
 1. GitHub Actions Workflow File (.github/workflows/ci-cd.yml)
