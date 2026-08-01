@@ -89,15 +89,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-kubectl@v3
-      
-      - name: Configure AWS and kubectl
+
+      - name: Configure AWS Credentials
+   
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Update Kubeconfig for EKS
+     
+        run: aws eks update-kubeconfig --region eu-central-1 --name eks-annaa
+
+      - name: Configure kubectl
         run: |
-          mkdir -p $HOME/.aws
-          cat > $HOME/.aws/credentials << AWSCREDS
-          [default]
-          aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWSCREDS
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
