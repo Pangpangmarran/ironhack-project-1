@@ -1,14 +1,11 @@
 var app = angular.module('catsvsdogs', []);
 
-// Decide which namespace to use, but always use the /result/socket.io path
-var namespace = '/result'; // default namespace
-if (window.location.pathname.indexOf('/result') === 0) {
-  namespace = '/result';  // /result namespace
-}
+// Use root namespace only
+var namespace = '/';
 
-// Connect using the chosen namespace, but ALWAYS path: '/result/socket.io'
+// Connect to root namespace with default socket.io path
 var socket = io(namespace, {
-  path: '/result/socket.io',
+  path: '/socket.io',
   transports: ['websocket', 'polling']
 });
 
