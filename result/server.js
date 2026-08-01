@@ -4,42 +4,24 @@ var express = require('express'),
     cookieParser = require('cookie-parser'),
     path = require('path'),
     app = express(),
-    server = require('http').Server(app),
-    // IMPORTANT: Socket.IO path is /result/socket.io
-    io = require('socket.io')(server, { path: '/result/socket.io' });
+    server = require('http').Server(app);
 
+var io = require('socket.io')(server);
 var port = process.env.PORT || 4000;
 
-// Create two namespaces: root ("/") and "/result"
-var rootNamespace = io.of('/');      // Default namespace for pages at "/"
-var resultNamespace = io.of('/result'); // Namespace for pages at "/result"
-
-// Handle connections on the default namespace
-rootNamespace.on('connection', function (socket) {
-  console.log("Connected on root namespace");
-  socket.emit('message', { text: 'Welcome from root!' });
-
+// Default Socket.IO connection
+io.on('connection', function (socket) {
+  console.log("Connected to Socket.IO");
   socket.on('subscribe', function (data) {
     socket.join(data.channel);
   });
 });
 
-// Handle connections on the /result namespace
-resultNamespace.on('connection', function (socket) {
-  console.log("Connected on /result namespace");
-  socket.emit('message', { text: 'Welcome from result!' });
-
-  socket.on('subscribe', function (data) {
-    socket.join(data.channel);
-  });
-});
-
-// --- Example PostgreSQL logic (adjust as needed) ---
 var pgHost = process.env.PG_HOST || 'db';
 var pgPort = process.env.PG_PORT || 5432;
 var pgUser = process.env.PG_USER || 'postgres';
 var pgPassword = process.env.PG_PASSWORD || 'postgres';
-var pgDatabase = process.env.PG_DATABASE || 'postgres';
+var pgDatabase = process.env.PG_DATABASE || 'votes';
 
 var connectionString = `postgresql://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`;
 console.log(connectionString);
@@ -72,13 +54,8 @@ function getVotes(client) {
       console.error("Error performing query: " + err);
     } else {
       var votes = collectVotesFromResult(result);
-
-      // Broadcast to both namespaces
-      rootNamespace.emit("scores", JSON.stringify(votes));
-      resultNamespace.emit("scores", JSON.stringify(votes));
+      io.emit("scores", JSON.stringify(votes));
     }
-
-    // Repeat periodically
     setTimeout(function () { getVotes(client); }, 1000);
   });
 }
@@ -90,22 +67,16 @@ function collectVotesFromResult(result) {
   });
   return votes;
 }
-// --- End DB example ---
 
-// Basic middleware
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve static files from the "views" folder on both "/" and "/result"
 app.use(express.static(path.join(__dirname, 'views')));
 app.use("/result", express.static(path.join(__dirname, 'views')));
 
-// Serve the same index.html for both routes
 app.get(['/', '/result'], function (req, res) {
   res.sendFile(path.resolve(__dirname, 'views', 'index.html'));
 });
 
-// Start server
 server.listen(port, function () {
   console.log('App running on port ' + server.address().port);
 });
