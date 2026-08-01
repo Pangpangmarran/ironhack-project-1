@@ -66,6 +66,15 @@ kubectl get svc vote result -n voting-app
 
 Access at the LoadBalancer external IPs shown.
 
+----------------------------------------------------------------
+Namespaces
+--------------------------------------------------------------------
+
+In the deployment file there is namespace: "voting-app" on all parts as all should be in one namespace for cluster management. 
+
+I created a monitoring area in the cluster from the AWS portal.
+Both can exist in the same cluster as Namespaces divide them and there is specific resources allocated as defined in the voting-app yaml file. 
+
 ------------------------------------------------------------------
 What is CI/CD?
 -----------------------------------------------------------------------
@@ -123,4 +132,8 @@ Deploy Job: Update Kubernetes manifests and apply
 4. Secrets
 DOCKER_USERNAME → for pushing to Docker Hub
 DOCKER_PASSWORD → Docker Hub token
-KUBECONFIG → Kubernetes cluster credentials
+KUBE_CONFIG → Kubernetes cluster credentials
+AWS_ACCESS_KEY_ID
+AWS_REGION
+AWS_SECRET_ACCESS_KEY
+DOCKER_CONFIG
