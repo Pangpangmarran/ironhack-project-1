@@ -5,3 +5,4 @@ project2-local-cloud
 projectparts.txt
 README.md
 *.zip
+kubeconfig.base64
