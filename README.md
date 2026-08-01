@@ -36,9 +36,10 @@ Use ConfigMaps/Secrets for config:
 Database credentials → Secrets
 Environment variables → ConfigMaps
 Connection strings with service names (e.g., redis:6379, db:5432)
-# details on this will be in projectparts.txt where the design choices will be as well as some instructions.
 
-Persistent storage: 
+Details on this will be in projectparts.txt where the design choices will be as well as some instructions.
+
+Persistent storage: (some issues with the storage for postgres)
 
 PostgreSQL needs PersistentVolume for data
 Redis can use ephemeral storage (or PV if you want persistence)
@@ -49,6 +50,14 @@ Service discovery by DNS name (built-in)
 Horizontal scaling (replicas)
 Health checks → livenessProbe/readinessProbe
 Resource limits (CPU/memory requests)
+
+This end snippet from the Deployment first section of voting-deployment.yaml show the solution that is not for production:  
+
+      volumes:
+      - name: db-storage
+        emptyDir: {}
+
+This is a cluster local solution and not to be used for production (repeat for memory retention).
 
 --------------------------------------------------------------------------
 

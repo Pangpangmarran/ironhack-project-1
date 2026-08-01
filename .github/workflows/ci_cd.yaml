@@ -101,8 +101,10 @@ jobs:
       - name: Update Kubeconfig for EKS
         run: aws eks update-kubeconfig --region eu-central-1 --name eks-annaa
 
-      - name: Debug Environment Variables
-        run: printenv | sort
+      - name: Validate kubectl Configuration
+        run: |
+          kubectl config view
+          kubectl config current-context
 
       - name: Configure kubectl
         run: |
