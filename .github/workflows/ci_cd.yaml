@@ -4,13 +4,13 @@ on:
   push:
     branches:
       - project2
-  pull_request:
-    branches:
-      - project2
 
 env:
   REGISTRY: docker.io
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: eu-central-1
 
 jobs:
   build-vote:
@@ -18,158 +18,94 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Vote image
-        uses: docker/build-push-action@v4
+      - uses: docker/build-push-action@v4
         with:
           context: ./vote
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/voting-app:latest
             ${{ secrets.DOCKER_USERNAME }}/voting-app:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voting-app:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voting-app:buildcache,mode=max
 
   build-result:
     name: Build Result App
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Result image
-        uses: docker/build-push-action@v4
+      - uses: docker/build-push-action@v4
         with:
           context: ./result
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/result-app:latest
             ${{ secrets.DOCKER_USERNAME }}/result-app:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/result-app:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/result-app:buildcache,mode=max
 
   build-worker:
     name: Build Worker App
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Worker image
-        uses: docker/build-push-action@v4
+      - uses: docker/build-push-action@v4
         with:
           context: ./worker
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/worker-app:latest
             ${{ secrets.DOCKER_USERNAME }}/worker-app:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/worker-app:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/worker-app:buildcache,mode=max
 
   deploy:
     name: Deploy to Kubernetes
     needs: [build-vote, build-result, build-worker]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/project2' && github.event_name == 'push'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: eu-central-1
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: v1.27.0
-
-      - name: Configure kubectl with kubeconfig
+      - uses: azure/setup-kubectl@v3
+      
+      - name: Configure AWS and kubectl
         run: |
+          mkdir -p $HOME/.aws
+          cat > $HOME/.aws/credentials << AWSCREDS
+          [default]
+          aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWSCREDS
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Apply Kubernetes manifests
+      - name: Apply manifests
         run: |
           kubectl apply -f voting-namespace.yaml
           kubectl apply -f voting-services.yaml
           kubectl apply -f voting-deployments.yaml
 
-      - name: Update Vote image
+      - name: Update images
         run: |
-          kubectl set image deployment/vote vote=${{ secrets.DOCKER_USERNAME }}/voting-app:${{ github.sha }} \
-            --namespace voting-app \
-            --record
-
-      - name: Update Result image
-        run: |
-          kubectl set image deployment/result result=${{ secrets.DOCKER_USERNAME }}/result-app:${{ github.sha }} \
-            --namespace voting-app \
-            --record
-
-      - name: Update Worker image
-        run: |
-          kubectl set image deployment/worker worker=${{ secrets.DOCKER_USERNAME }}/worker-app:${{ github.sha }} \
-            --namespace voting-app \
-            --record
+          kubectl set image deployment/vote vote=${{ secrets.DOCKER_USERNAME }}/voting-app:${{ github.sha }} -n voting-app
+          kubectl set image deployment/result result=${{ secrets.DOCKER_USERNAME }}/result-app:${{ github.sha }} -n voting-app
+          kubectl set image deployment/worker worker=${{ secrets.DOCKER_USERNAME }}/worker-app:${{ github.sha }} -n voting-app
 
       - name: Wait for rollout
         run: |
           kubectl rollout status deployment/vote -n voting-app --timeout=5m
           kubectl rollout status deployment/result -n voting-app --timeout=5m
           kubectl rollout status deployment/worker -n voting-app --timeout=5m
-
-      - name: Verify services
-        run: |
-          echo "Vote Service:"
-          kubectl get service vote -n voting-app
-          echo "Result Service:"
-          kubectl get service result -n voting-app
-          echo "All Deployments:"
-          kubectl get deployments -n voting-app
-
-      - name: Check pod status
-        run: kubectl get pods -n voting-app
-
-      - name: Get external IPs
-        run: |
-          echo "Vote App External IP:"
-          kubectl get service vote -n voting-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "Pending..."
-          echo ""
-          echo "Result App External IP:"
-          kubectl get service result -n voting-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "Pending..."
-
-  notify:
-    name: Notify Deployment Status
-    needs: [deploy]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Deployment Success
-        if: success()
-        run: echo "Deployment to Kubernetes successful! Vote app and Result app are live."
-
-      - name: Deployment Failed
-        if: failure()
-        run: echo "Deployment failed. Check logs above for details."
