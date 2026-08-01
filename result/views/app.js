@@ -1,7 +1,7 @@
 var app = angular.module('catsvsdogs', []);
 
 // Decide which namespace to use, but always use the /result/socket.io path
-var namespace = '/'; // default namespace
+var namespace = '/result'; // default namespace
 if (window.location.pathname.indexOf('/result') === 0) {
   namespace = '/result';  // /result namespace
 }
