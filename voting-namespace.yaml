@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voting-app
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: voting-config
+  namespace: voting-app
+data:
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  DB_HOST: "db"
+  DB_PORT: "5432"
+  DB_USER: "postgres"
+  DB_NAME: "votes"
+  OPTION_A: "Cats"
+  OPTION_B: "Dogs"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: voting-secret
+  namespace: voting-app
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "postgres"
+  DB_PASSWORD: "postgres"
