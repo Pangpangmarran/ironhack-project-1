@@ -5,7 +5,6 @@ metadata:
   name: voting-app
 
 ---
-# ConfigMap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,7 +19,6 @@ data:
   DB_NAME: "votes"
 
 ---
-# Secret
 apiVersion: v1
 kind: Secret
 metadata:
@@ -32,7 +30,6 @@ stringData:
   DB_PASSWORD: "postgres"
 
 ---
-# PersistentVolumeClaim for PostgreSQL
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -46,7 +43,6 @@ spec:
       storage: 5Gi
 
 ---
-# Frontend Pod (vote + result)
 apiVersion: v1
 kind: Pod
 metadata:
@@ -54,7 +50,7 @@ metadata:
   namespace: voting-app
 spec:
   containers:
-  # Vote container
+
   - name: vote
     image: pangpangmarran/voting-app:latest
     ports:
@@ -78,7 +74,6 @@ spec:
         memory: "256Mi"
         cpu: "200m"
   
-  # Result container
   - name: result
     image: pangpangmarran/result-app:latest
     ports:
@@ -118,7 +113,6 @@ spec:
         cpu: "200m"
 
 ---
-# Backend Pod (redis + worker)
 apiVersion: v1
 kind: Pod
 metadata:
@@ -126,7 +120,7 @@ metadata:
   namespace: voting-app
 spec:
   containers:
-  # Redis container
+
   - name: redis
     image: redis:alpine
     ports:
@@ -138,13 +132,12 @@ spec:
       limits:
         memory: "256Mi"
         cpu: "200m"
-  
-  # Worker container
+
   - name: worker
     image: pangpangmarran/worker-app:latest
     env:
     - name: REDIS_HOST
-      value: "localhost"  # Same pod as redis
+      value: "localhost"  
     - name: REDIS_PORT
       valueFrom:
         configMapKeyRef:
@@ -184,7 +177,6 @@ spec:
         cpu: "500m"
 
 ---
-# Database Pod (postgres)
 apiVersion: v1
 kind: Pod
 metadata:
@@ -228,7 +220,6 @@ spec:
       claimName: db-pvc
 
 ---
-# Service for frontend (vote + result)
 apiVersion: v1
 kind: Service
 metadata:
@@ -249,7 +240,6 @@ spec:
     protocol: TCP
 
 ---
-# Service for backend (redis + worker)
 apiVersion: v1
 kind: Service
 metadata:
@@ -265,7 +255,6 @@ spec:
     protocol: TCP
 
 ---
-# Service for database
 apiVersion: v1
 kind: Service
 metadata:
