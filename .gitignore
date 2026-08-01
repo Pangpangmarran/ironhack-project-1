@@ -6,3 +6,5 @@ projectparts.txt
 README.md
 *.zip
 kubeconfig.base64
+3podVoting.yaml
+microservices.yaml

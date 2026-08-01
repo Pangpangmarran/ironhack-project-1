@@ -1,5 +1,4 @@
 ---
-# PostgreSQL Deployment with emptyDir
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -68,7 +67,6 @@ spec:
         emptyDir: {}
 
 ---
-# Redis Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -115,7 +113,6 @@ spec:
           failureThreshold: 2
 
 ---
-# Vote Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -167,7 +164,6 @@ spec:
           failureThreshold: 2
 
 ---
-# Result Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -225,7 +221,6 @@ spec:
           failureThreshold: 2
 
 ---
-# Worker Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
