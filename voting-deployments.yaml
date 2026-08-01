@@ -1,4 +1,5 @@
 ---
+# PostgreSQL Deployment with emptyDir
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -64,10 +65,10 @@ spec:
           failureThreshold: 2
       volumes:
       - name: db-storage
-        persistentVolumeClaim:
-          claimName: db-pvc
+        emptyDir: {}
 
 ---
+# Redis Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -114,6 +115,7 @@ spec:
           failureThreshold: 2
 
 ---
+# Vote Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -165,6 +167,7 @@ spec:
           failureThreshold: 2
 
 ---
+# Result Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -222,6 +225,7 @@ spec:
           failureThreshold: 2
 
 ---
+# Worker Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:

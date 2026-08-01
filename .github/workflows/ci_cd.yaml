@@ -134,7 +134,7 @@ jobs:
 
 
       - name: Apply Secret
-        run: kubectl apply -f - <<EOF
+        run: kubectl apply -f - <<'EOF'
         apiVersion: v1
         kind: Secret
         metadata:
