@@ -6,6 +6,18 @@ metadata:
   name: voting-app
 
 ---
+# StorageClass for EBS volumes
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-sc
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+
+---
 # ConfigMap for shared configuration
 apiVersion: v1
 kind: ConfigMap
@@ -42,6 +54,7 @@ metadata:
   name: db-pvc
   namespace: voting-app
 spec:
+  storageClassName: local-sc
   accessModes:
     - ReadWriteOnce
   resources:
@@ -119,25 +132,6 @@ spec:
           claimName: db-pvc
 
 ---
-# PostgreSQL Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: db
-  namespace: voting-app
-  labels:
-    app: db
-spec:
-  type: ClusterIP
-  selector:
-    app: db
-  ports:
-  - port: 5432
-    targetPort: 5432
-    protocol: TCP
-    name: postgres
-
----
 # Redis Deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -158,7 +152,7 @@ spec:
     spec:
       containers:
       - name: redis
-        image: redis:alpine
+        image: redis:7-alpine
         ports:
         - containerPort: 6379
           name: redis
@@ -170,19 +164,15 @@ spec:
             memory: "256Mi"
             cpu: "200m"
         livenessProbe:
-          exec:
-            command:
-            - redis-cli
-            - ping
-          initialDelaySeconds: 5
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
         readinessProbe:
-          exec:
-            command:
-            - redis-cli
-            - ping
+          tcpSocket:
+            port: 6379
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 2
@@ -199,16 +189,35 @@ metadata:
     app: redis
 spec:
   type: ClusterIP
-  selector:
-    app: redis
   ports:
   - port: 6379
     targetPort: 6379
     protocol: TCP
     name: redis
+  selector:
+    app: redis
 
 ---
-# Vote App Deployment (Scalable - 3 replicas)
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: voting-app
+  labels:
+    app: db
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: db
+
+---
+# Vote Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -218,11 +227,6 @@ metadata:
     app: vote
 spec:
   replicas: 3
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
   selector:
     matchLabels:
       app: vote
@@ -233,22 +237,13 @@ spec:
     spec:
       containers:
       - name: vote
-        image: pangpangmarran/voting-app:latest
-        imagePullPolicy: Always
+        image: dockersamples/examplevotingapp_vote
         ports:
         - containerPort: 80
           name: http
-        env:
-        - name: REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: REDIS_HOST
-        - name: REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: REDIS_PORT
+        envFrom:
+        - configMapRef:
+            name: voting-config
         resources:
           requests:
             memory: "128Mi"
@@ -262,7 +257,7 @@ spec:
             port: 80
           initialDelaySeconds: 10
           periodSeconds: 10
-          timeoutSeconds: 5
+          timeoutSeconds: 3
           failureThreshold: 3
         readinessProbe:
           httpGet:
@@ -270,11 +265,11 @@ spec:
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
-          timeoutSeconds: 3
+          timeoutSeconds: 2
           failureThreshold: 2
 
 ---
-# Vote Service (LoadBalancer for external access)
+# Vote Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -284,16 +279,16 @@ metadata:
     app: vote
 spec:
   type: LoadBalancer
-  selector:
-    app: vote
   ports:
   - port: 8080
     targetPort: 80
     protocol: TCP
     name: http
+  selector:
+    app: vote
 
 ---
-# Result App Deployment (Scalable - 2 replicas)
+# Result Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -303,11 +298,6 @@ metadata:
     app: result
 spec:
   replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
   selector:
     matchLabels:
       app: result
@@ -318,37 +308,19 @@ spec:
     spec:
       containers:
       - name: result
-        image: pangpangmarran/result-app:latest
-        imagePullPolicy: Always
+        image: dockersamples/examplevotingapp_result
         ports:
         - containerPort: 80
           name: http
+        envFrom:
+        - configMapRef:
+            name: voting-config
         env:
-        - name: PG_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_HOST
-        - name: PG_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_PORT
-        - name: PG_USER
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_USER
         - name: PG_PASSWORD
           valueFrom:
             secretKeyRef:
               name: voting-secret
               key: DB_PASSWORD
-        - name: PG_DATABASE
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_NAME
         resources:
           requests:
             memory: "128Mi"
@@ -362,7 +334,7 @@ spec:
             port: 80
           initialDelaySeconds: 10
           periodSeconds: 10
-          timeoutSeconds: 5
+          timeoutSeconds: 3
           failureThreshold: 3
         readinessProbe:
           httpGet:
@@ -370,11 +342,11 @@ spec:
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
-          timeoutSeconds: 3
+          timeoutSeconds: 2
           failureThreshold: 2
 
 ---
-# Result Service (LoadBalancer for external access)
+# Result Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -384,16 +356,16 @@ metadata:
     app: result
 spec:
   type: LoadBalancer
-  selector:
-    app: result
   ports:
   - port: 8081
     targetPort: 80
     protocol: TCP
     name: http
+  selector:
+    app: result
 
 ---
-# Worker Deployment (Scalable - 2 replicas)
+# Worker Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -403,11 +375,6 @@ metadata:
     app: worker
 spec:
   replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
   selector:
     matchLabels:
       app: worker
@@ -418,120 +385,20 @@ spec:
     spec:
       containers:
       - name: worker
-        image: pangpangmarran/worker-app:latest
-        imagePullPolicy: Always
+        image: dockersamples/examplevotingapp_worker
+        envFrom:
+        - configMapRef:
+            name: voting-config
         env:
-        - name: REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: REDIS_HOST
-        - name: REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: REDIS_PORT
-        - name: DB_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_HOST
-        - name: DB_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_PORT
-        - name: DB_USER
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_USER
-        - name: DB_PASSWORD
+        - name: PG_PASSWORD
           valueFrom:
             secretKeyRef:
               name: voting-secret
               key: DB_PASSWORD
-        - name: DB_NAME
-          valueFrom:
-            configMapKeyRef:
-              name: voting-config
-              key: DB_NAME
         resources:
           requests:
             memory: "256Mi"
             cpu: "200m"
           limits:
             memory: "512Mi"
-            cpu: "500m"
-
----
-# HorizontalPodAutoscaler for Vote (auto-scale based on CPU/Memory)
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: vote-hpa
-  namespace: voting-app
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: vote
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-
----
-# HorizontalPodAutoscaler for Result
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: result-hpa
-  namespace: voting-app
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: result
-  minReplicas: 2
-  maxReplicas: 8
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-
----
-# HorizontalPodAutoscaler for Worker
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: worker-hpa
-  namespace: voting-app
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: worker
-  minReplicas: 2
-  maxReplicas: 5
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 75
+            cpu: "400m"

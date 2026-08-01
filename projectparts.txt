@@ -13,9 +13,9 @@ My Design Choices Explained:
 
 ✓ I included it because:
 
-All configuration is in one place
-Easy to see what environment variables each service needs
-Good for learning
+All configuration is in one place.
+Easy to see what environment variables each service needs.
+Good for learning.
 
 ✗ I could have separated it because:
 
@@ -49,7 +49,9 @@ Prevents accidental mixing with other apps
 
 Data persists across pod restarts
 Database doesn't lose data if pod crashes
+
 ✗ For cloud (AWS/GCP/Azure), you'd use managed databases
+
 ------------------------------------------------------------------------------------------
 
 What is a Config File? (Different from ConfigMap)
@@ -93,6 +95,7 @@ Kustomize: Combine base + overlays for different envs
 Helm: Template-based, package management
 
 -----------------------------------------------------------------------------------
+
 My Manifest Design: Why It's Organized This Way
 
 # 1. Namespace first
@@ -159,6 +162,119 @@ PVC (dependency for stateful services)
 Database (needs to exist before other services connect)
 Cache (needed by vote and worker)
 Applications (vote, result, worker depend on db/redis)
+
+----------------------------------------------------------------------------
+Here's how `kubectl apply` finds your EKS cluster:
+
+---
+
+**Step 1: kubectl reads the kubeconfig file**
+
+When you run:
+```bash
+kubectl apply -f voting-app-microservices-k8s.yaml
+```
+
+kubectl automatically looks for credentials in:
+```
+~/.kube/config
+```
+
+**Step 2: The kubeconfig contains your EKS cluster info**
+
+When you ran `./up.sh annaa`, it executed:
+
+```bash
+aws eks update-kubeconfig --name eks-annaa --region eu-central-1
+```
+
+This created/updated `~/.kube/config` with:
+```yaml
+clusters:
+- cluster:
+    certificate-authority-data: ...
+    server: https://0C66B41B5415F525912DE9B14E0C6E19.gr7.eu-central-1.eks.amazonaws.com
+  name: eks-annaa
+contexts:
+- context:
+    cluster: eks-annaa
+    user: eks-annaa
+  name: eks-annaa
+current-context: eks-annaa
+users:
+- name: eks-annaa
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      command: aws
+      args:
+      - eks
+      - get-token
+      - --cluster-name
+      - eks-annaa
+      - --region
+      - eu-central-1
+```
+
+---
+
+**Step 3: kubectl connects to your EKS cluster**
+
+When you run `kubectl apply`, it:
+1. **Reads `~/.kube/config`** → finds `current-context: eks-annaa`
+2. **Gets the cluster server URL** → `https://0C66B41B5415F525912DE9B14E0C6E19.gr7.eu-central-1.eks.amazonaws.com`
+3. **Gets authentication** → runs `aws eks get-token` to get temporary AWS credentials
+4. **Connects to EKS API server** in AWS → sends your YAML manifest
+5. **EKS creates resources** → deployments, services, pods, etc.
+
+---
+
+**Step 4: EKS validates and deploys**
+
+Your `voting-app-microservices-k8s.yaml` is sent to the EKS API server, which:
+- Validates the YAML syntax
+- Creates the `voting-app` namespace
+- Deploys 5 services (vote, result, worker, redis, db)
+- Schedules pods on your worker nodes
+- Creates LoadBalancer services with external IPs
+
+---
+
+**The flow visualized:**
+
+```
+Your machine:
+  kubectl apply -f voting-app-microservices-k8s.yaml
+         ↓
+  Read ~/.kube/config
+         ↓
+  Get EKS cluster URL & credentials
+         ↓
+  AWS API Server (in cloud)
+         ↓
+  Deploy to EKS cluster
+         ↓
+  Pods running on worker nodes in AWS
+```
+
+---
+
+**Verify the connection:**
+
+```bash
+kubectl cluster-info
+```
+
+Shows the EKS API server URL it's connected to.
+
+```bash
+kubectl config current-context
+```
+
+Shows you're using `eks-annaa` context.
+
+**The YAML file itself doesn't know about AWS** — it's generic Kubernetes manifests. The magic happens in the `~/.kube/config` file that tells kubectl *where* to deploy.
+
 ----------------------------------------------------------------------------------
 For GitHub Actions to work:
 -----------------------------------------------------------------------------------
@@ -172,7 +288,8 @@ Check which kubeconfig you're using:
 kubectl cluster-info
 Does it show:
 
-Kubernetes master is running at https://...eks... → EKS ✓
+Kubernetes master is running at https://...eks... → EKS ✓ 
+
 -----------------------------------------------------------------------------------------
 What is CI/CD?
 ------------------------------------------------------------------------------------------
