@@ -95,7 +95,7 @@ jobs:
     name: Deploy to Kubernetes
     needs: [build-vote, build-result, build-worker]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/project2' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
 
@@ -110,44 +110,11 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Create namespace
-        run: kubectl create namespace voting-app --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Apply ConfigMap
-        run: |
-          kubectl apply -f - <<'EOF'
-          apiVersion: v1
-          kind: ConfigMap
-          metadata:
-            name: voting-config
-            namespace: voting-app
-          data:
-            REDIS_HOST: "redis"
-            REDIS_PORT: "6379"
-            DB_HOST: "db"
-            DB_PORT: "5432"
-            DB_USER: "postgres"
-            DB_NAME: "votes"
-            OPTION_A: "Cats"
-            OPTION_B: "Dogs"
-          EOF
-
-
-      - name: Apply Secret
-        run: kubectl apply -f - <<'EOF'
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: voting-secret
-          namespace: voting-app
-        type: Opaque
-        stringData:
-          POSTGRES_PASSWORD: "postgres"
-          DB_PASSWORD: "postgres"
-        EOF
-
       - name: Apply Kubernetes manifests
-        run: kubectl apply -f voting-app-microservices-k8s.yaml
+        run: |
+          kubectl apply -f voting-namespace.yaml
+          kubectl apply -f voting-services.yaml
+          kubectl apply -f voting-deployments.yaml
 
       - name: Update Vote image
         run: |
@@ -188,10 +155,10 @@ jobs:
       - name: Get external IPs
         run: |
           echo "Vote App External IP:"
-          kubectl get service vote -n voting-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "Pending..."
+          kubectl get service vote -n voting-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "Pending..."
           echo ""
           echo "Result App External IP:"
-          kubectl get service result -n voting-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "Pending..."
+          kubectl get service result -n voting-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "Pending..."
 
   notify:
     name: Notify Deployment Status
