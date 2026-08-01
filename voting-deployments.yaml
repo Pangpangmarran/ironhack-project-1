@@ -195,7 +195,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: voting-secret
-              key: DB_PASSWORD
+              key: POSTGRES_PASSWORD
         resources:
           requests:
             memory: "128Mi"
@@ -249,7 +249,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: voting-secret
-              key: DB_PASSWORD
+              key: POSTGRES_PASSWORD
         resources:
           requests:
             memory: "256Mi"
