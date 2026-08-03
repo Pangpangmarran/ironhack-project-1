@@ -12,6 +12,7 @@ var port = process.env.PORT || 4000;
 // Default Socket.IO connection
 io.on('connection', function (socket) {
   console.log("Connected to Socket.IO");
+  socket.emit('message', { text: 'Welcome!' });  // ADD THIS LINE
   socket.on('subscribe', function (data) {
     socket.join(data.channel);
   });
