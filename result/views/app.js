@@ -1,6 +1,6 @@
 var app = angular.module('catsvsdogs', []);
 
-// Use root namespace only
+// Use root namespace only!
 var namespace = '/';
 
 // Connect to root namespace with default socket.io path

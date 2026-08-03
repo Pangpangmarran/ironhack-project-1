@@ -43,64 +43,6 @@ Helm: Template-based, package management
 
 -----------------------------------------------------------------------------------
 
-Manifest Design: 
-
-# 1. Namespace first
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: voting-app
-
-# 2. Configuration layer (non-sensitive)
----
-apiVersion: v1
-kind: ConfigMap
-...
-
-# 3. Secrets layer (sensitive)
----
-apiVersion: v1
-kind: Secret
-...
-
-# 4. Storage layer (PVC)
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-...
-
-# 5. Stateful services (Database)
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: db
-...
-
-# 6. Cache layer (Redis)
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redis
-...
-
-# 7. Frontend services (Vote, Result)
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: vote
-...
-
-# 8. Background worker
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: worker
-...
 Order matters:
 
 Namespace first (so resources can reference it)
@@ -222,6 +164,30 @@ kubectl config current-context
 Shows you're using `eks-annaa` context.
 
 **The YAML file itself doesn't know about AWS** — it's generic Kubernetes manifests. The magic happens in the `~/.kube/config` file that tells kubectl *where* to deploy.
+
+-------------------------------------------------------------------
+
+Storage explanation (quick):
+
+StorageClass (local-sc):
+
+Recipe/template for creating volumes
+Says "use local disk storage with immediate binding"
+provisioner: kubernetes.io/no-provisioner = Kubernetes doesn't auto-provision; you manually create PersistentVolumes
+PersistentVolume (db-pv):
+
+Actual storage pool (10Gi on node disk at /tmp/voting-data)
+Claims the storage for the database pod
+PersistentVolumeClaim (db-pvc):
+
+Pod's request: "I want 10Gi from local-sc"
+Binds to db-pv
+Pod mounts it
+In your case:
+
+Database uses emptyDir now (temporary, pod-local storage)
+Data is lost when pod restarts
+Votes from earlier are gone
 
 ----------------------------------------------------------------------------------
 For GitHub Actions to work:

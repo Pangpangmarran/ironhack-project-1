@@ -17,6 +17,10 @@ io.on('connection', function (socket) {
   });
 });
 
+server.listen(port, function () {
+  console.log('App running on port ' + server.address().port);
+});
+
 var pgHost = process.env.PG_HOST || 'db';
 var pgPort = process.env.PG_PORT || 5432;
 var pgUser = process.env.PG_USER || 'postgres';
@@ -77,6 +81,3 @@ app.get(['/', '/result'], function (req, res) {
   res.sendFile(path.resolve(__dirname, 'views', 'index.html'));
 });
 
-server.listen(port, function () {
-  console.log('App running on port ' + server.address().port);
-});
