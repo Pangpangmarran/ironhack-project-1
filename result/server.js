@@ -12,7 +12,7 @@ var port = process.env.PORT || 4000;
 // Default Socket.IO connection
 io.on('connection', function (socket) {
   console.log("Connected to Socket.IO");
-  socket.emit('message', { text: 'Welcome!' });  // ADD THIS LINE
+  socket.emit('message', { text: 'Welcome!' });  
   socket.on('subscribe', function (data) {
     socket.join(data.channel);
   });
@@ -54,11 +54,14 @@ async.retry(
 );
 
 function getVotes(client) {
+  console.log("getVotes() called");  
   client.query('SELECT vote, COUNT(id) AS count FROM votes GROUP BY vote', [], function (err, result) {
+    console.log("Query callback fired, err:", err);  
     if (err) {
       console.error("Error performing query: " + err);
     } else {
       var votes = collectVotesFromResult(result);
+      console.log("Emitting scores:", JSON.stringify(votes)); 
       io.emit("scores", JSON.stringify(votes));
     }
     setTimeout(function () { getVotes(client); }, 1000);
