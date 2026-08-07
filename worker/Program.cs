@@ -54,6 +54,7 @@ namespace Worker
 
                     string json = redis.ListLeftPopAsync("votes").Result;
                     if (json != null)
+                    
                     {
                         var vote = JsonConvert.DeserializeAnonymousType(json, definition);
                         Console.WriteLine($"Processing vote for '{vote.vote}' by '{vote.voter_id}'");
@@ -64,11 +65,11 @@ namespace Worker
                             Console.WriteLine("Reconnecting DB");
                             pgsql = OpenDbConnection(pgConnectionString);
                         }
-                        else
-                        { // Normal +1 vote requested
-                            UpdateVote(pgsql, vote.voter_id, vote.vote);
-                        }
+
+                        // Update vote in db
+                        UpdateVote(pgsql, vote.voter_id, vote.vote);
                     }
+
                     else
                     {
                         keepAliveCommand.ExecuteNonQuery();

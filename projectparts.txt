@@ -1,4 +1,23 @@
 
+voting-app (Namespace)
+│
+├── Deployments (Compute)
+│   ├── vote          [3 replicas]  → Frontend (Python/Flask)
+│   ├── result        [2 replicas]  → Frontend (Node/Angular)
+│   ├── worker        [2 replicas]  → Backend Processor (.NET/Java)
+│   ├── redis         [1 replica]   → Message Queue
+│   └── db            [1 replica]   → Persistent Storage (Postgres)
+│
+├── Services (Networking)
+│   ├── vote          [LoadBalancer] → Exposes Port 8080 to Internet
+│   ├── result        [LoadBalancer] → Exposes Port 8081 to Internet
+│   ├── redis         [ClusterIP]    → Internal only (Port 6379)
+│   └── db            [ClusterIP]    → Internal only (Port 5432)
+│
+└── Configuration
+    ├── voting-config   (ConfigMap) → App settings, feature flags
+    └── voting-secret   (Secret)    → DB passwords, API keys   
+
 ------------------------------------------------------------------------------------------
 
 What is a Config File? (Different from ConfigMap)
