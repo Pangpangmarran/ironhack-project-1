@@ -70,9 +70,12 @@ function getVotes(client) {
 
 function collectVotesFromResult(result) {
   var votes = { a: 0, b: 0 };
+  console.log("Raw query result:", result.rows);  
   result.rows.forEach(function (row) {
+    console.log("Processing row:", row.vote, "count:", row.count);  
     votes[row.vote] = parseInt(row.count);
   });
+  console.log("Final votes object:", votes);  
   return votes;
 }
 
