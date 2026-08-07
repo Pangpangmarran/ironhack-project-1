@@ -132,7 +132,7 @@ spec:
     spec:
       containers:
       - name: vote
-        image: image: pangpangmarran/voting-app:latest
+        image: pangpangmarran/voting-app:latest
         ports:
         - containerPort: 80
           name: http
@@ -250,7 +250,7 @@ spec:
     spec:
       containers:
       - name: worker
-        image: image: pangpangmarran/worker-app:latest
+        image: pangpangmarran/worker-app:latest
         envFrom:
         - configMapRef:
             name: voting-config
