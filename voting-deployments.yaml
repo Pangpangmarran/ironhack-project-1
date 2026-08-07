@@ -132,7 +132,7 @@ spec:
     spec:
       containers:
       - name: vote
-        image: dockersamples/examplevotingapp_vote
+        image: image: pangpangmarran/voting-app:latest
         ports:
         - containerPort: 80
           name: http
@@ -183,7 +183,8 @@ spec:
     spec:
       containers:
       - name: result
-        image: dockersamples/examplevotingapp_result
+        image: pangpangmarran/result-app:latest
+
         ports:
         - containerPort: 80
           name: http
@@ -191,11 +192,20 @@ spec:
         - configMapRef:
             name: voting-config
         env:
+        - name: PG_HOST
+          value: "db"
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_USER
+          value: "postgres"
+        - name: PG_DATABASE
+          value: "votes"
         - name: PG_PASSWORD
           valueFrom:
             secretKeyRef:
               name: voting-secret
               key: POSTGRES_PASSWORD
+
         resources:
           requests:
             memory: "128Mi"
@@ -240,7 +250,7 @@ spec:
     spec:
       containers:
       - name: worker
-        image: dockersamples/examplevotingapp_worker
+        image: image: pangpangmarran/worker-app:latest
         envFrom:
         - configMapRef:
             name: voting-config
