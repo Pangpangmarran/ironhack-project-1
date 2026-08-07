@@ -29,6 +29,7 @@ var pgPassword = process.env.PG_PASSWORD || 'postgres';
 var pgDatabase = process.env.PG_DATABASE || 'votes';
 
 var connectionString = `postgresql://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`;
+console.log("Connection string:", connectionString);  // ADD THIS LINE
 console.log(connectionString);
 
 var { Pool } = require('pg');
